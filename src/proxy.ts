@@ -34,11 +34,16 @@ export function proxy(request: NextRequest) {
       );
     }
 
+    // Redirect (not rewrite): the browser must navigate to a path that does not
+    // require Basic Auth. A rewrite keeps the visible URL on `/` (etc.), so RSC
+    // and follow-up requests still hit the proxy as `/` and get 401 before the
+    // error page can render.
     const url = request.nextUrl.clone();
     url.pathname = "/rate-limited";
-    url.search = `?retry=${retryAfter}`;
+    url.search = "";
+    url.searchParams.set("retry", String(retryAfter));
 
-    return NextResponse.rewrite(url, { status: 429, headers });
+    return NextResponse.redirect(url, { status: 307, headers });
   }
 
   if (verifyDashboardBasicAuth(request.headers.get("authorization"))) {
@@ -58,6 +63,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|logo.svg|.*\\.(?:svg|png|ico)$).*)",
+    // Exclude /rate-limited so the lockout page is never behind Basic Auth
+    // (even if PUBLIC_PATHS drifts, this path must stay reachable).
+    "/((?!_next/static|_next/image|favicon.ico|logo.svg|rate-limited(?:/|$)|.*\\.(?:svg|png|ico)$).*)",
   ],
 };

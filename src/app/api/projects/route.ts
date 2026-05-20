@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { internalApiError } from "@/lib/api-errors";
 import { createProject, listProjectsWithStats } from "@/lib/projects";
 import { createProjectSchema } from "@/lib/validations";
 
@@ -8,8 +9,16 @@ function stripAnonKey<T extends { anonKey?: string }>(project: T) {
 }
 
 export async function GET() {
-  const projects = await listProjectsWithStats();
-  return NextResponse.json(projects.map(stripAnonKey));
+  try {
+    const projects = await listProjectsWithStats();
+    return NextResponse.json(projects.map(stripAnonKey));
+  } catch (error) {
+    return internalApiError(
+      "GET /api/projects",
+      "Failed to load projects",
+      error,
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -27,10 +36,10 @@ export async function POST(request: Request) {
     const id = await createProject(parsed.data);
     return NextResponse.json({ id }, { status: 201 });
   } catch (error) {
-    console.error("POST /api/projects", error);
-    return NextResponse.json(
-      { error: "Failed to create project" },
-      { status: 500 },
+    return internalApiError(
+      "POST /api/projects",
+      "Failed to create project",
+      error,
     );
   }
 }

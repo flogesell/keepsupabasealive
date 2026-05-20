@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { apiFetch } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 
 export function Dashboard() {
@@ -23,19 +24,56 @@ export function Dashboard() {
   const [hours, setHours] = useState(24);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
+    setLoadError(null);
     const [projectsRes, statsRes] = await Promise.all([
-      fetch("/api/projects"),
-      fetch(`/api/stats?hours=${hours}`),
+      apiFetch("/api/projects"),
+      apiFetch(`/api/stats?hours=${hours}`),
     ]);
 
-    if (projectsRes.ok) {
-      setProjects(await projectsRes.json());
+    const [projectsPayload, statsPayload] = await Promise.all([
+      projectsRes.json().catch(() => null),
+      statsRes.json().catch(() => null),
+    ]);
+
+    const formatFail = (
+      res: Response,
+      payload: unknown,
+      label: string,
+    ): string => {
+      if (payload && typeof payload === "object") {
+        const b = payload as { hint?: string; error?: string };
+        return (
+          b.hint ??
+          b.error ??
+          `Could not load ${label} (HTTP ${res.status})`
+        );
+      }
+      return `Could not load ${label} (HTTP ${res.status})`;
+    };
+
+    let message: string | null = null;
+    if (!projectsRes.ok) {
+      message = formatFail(projectsRes, projectsPayload, "projects");
     }
-    if (statsRes.ok) {
-      const data = await statsRes.json();
-      setChart(data.chart);
+    if (!statsRes.ok) {
+      message = message ?? formatFail(statsRes, statsPayload, "stats");
+    }
+    if (message) setLoadError(message);
+
+    if (projectsRes.ok && Array.isArray(projectsPayload)) {
+      setProjects(projectsPayload);
+    }
+    if (
+      statsRes.ok &&
+      statsPayload &&
+      typeof statsPayload === "object" &&
+      statsPayload !== null &&
+      "chart" in statsPayload
+    ) {
+      setChart((statsPayload as { chart: ChartPoint[] }).chart);
     }
   }, [hours]);
 
@@ -94,6 +132,15 @@ export function Dashboard() {
           <AddProjectDialog onCreated={refresh} />
         </div>
       </header>
+
+      {loadError && (
+        <div
+          className="mb-6 rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          role="alert"
+        >
+          {loadError}
+        </div>
+      )}
 
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         {[

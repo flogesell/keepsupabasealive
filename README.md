@@ -220,7 +220,7 @@ When `NODE_ENV=production`, the app **refuses to start** without:
 | Layer | Behavior |
 |-------|----------|
 | **Dashboard & API** | HTTP Basic Auth when `DASHBOARD_PASSWORD` is set |
-| **Failed logins** | Rate limited (5 failures / 15 min per IP) with a `/rate-limited` error page |
+| **Failed logins** | Rate limited (5 failures / 15 min per IP); browser is redirected to `/rate-limited` (no Basic Auth on that path) |
 | **Anon keys in DB** | Encrypted at rest with `ENCRYPTION_KEY` (AES-256-GCM) |
 | **API responses** | Anon keys never returned from `GET /api/projects` |
 | **SQL injection** | Drizzle ORM + Zod validation — no raw user SQL |
@@ -240,6 +240,37 @@ With `NODE_ENV` unset or `development`, auth and encryption env vars are **optio
 - No `DASHBOARD_PASSWORD` → dashboard open
 - No `ENCRYPTION_KEY` → anon keys stored as plaintext in SQLite
 - No `CRON_SECRET` → `/api/cron` accepts unauthenticated requests
+
+### Login keeps asking for the password (production)
+
+The browser dialog needs **both** username and password:
+
+| Field | Value |
+|-------|--------|
+| **Username** | `admin` (unless you set `DASHBOARD_USER` to something else) |
+| **Password** | Exactly `DASHBOARD_PASSWORD` from Coolify — no extra spaces or quotes |
+
+Common causes of an endless prompt:
+
+1. **Blank `DASHBOARD_USER` in Coolify** — Remove the variable entirely, or set a real username. An empty value is *not* the same as unset; the app used to expect an empty username in that case (fixed in recent versions — redeploy after updating).
+2. **Trailing newline in Coolify** — Re-paste the password or regenerate it; stray line breaks in the env value make every login fail.
+3. **Wrong username** — Safari/Chrome may pre-fill an email as the username; use `admin` (or your custom `DASHBOARD_USER`).
+4. **Second HTTP Basic Auth in front** — If Coolify/Traefik also has Basic Auth enabled for this app, disable it and rely on `DASHBOARD_PASSWORD` only (or you will get two prompts and mismatched credentials).
+5. **Stale container env** — After changing env vars, **redeploy/restart** the app so the running container picks them up.
+
+Verify from your machine (replace host and password):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -u admin:YOUR_PASSWORD https://your-domain.example/
+```
+
+`200` means credentials match; `401` means username/password/env still do not match what the container has.
+
+### API returns 500 (`Failed to load projects`, `Failed to create project`, etc.)
+
+1. **SQLite not writable** — Typical with Coolify volumes owned by root. Mount storage at `/data`, set `DATABASE_PATH=/data/keepsupabasealive.db`, and ensure UID **1001** (the Docker image user) can write: on the host, `chown -R 1001:1001 /path/to/volume`.
+2. **Missing `drizzle/` in the image** — Deploy with the repo **Dockerfile** (it copies `drizzle/`). If you run the standalone bundle elsewhere, set `DRIZZLE_MIGRATIONS_FOLDER` to the folder that contains `meta/_journal.json`.
+3. **Check container logs** — The server logs the underlying error; the JSON body may include a **`hint`** field with a short explanation.
 
 ### Limitations
 

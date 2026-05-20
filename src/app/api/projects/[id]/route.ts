@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { internalApiError } from "@/lib/api-errors";
 import { encryptSecret } from "@/lib/crypto";
 import { getDb } from "@/lib/db";
 import { projects } from "@/lib/schema";
@@ -45,10 +46,10 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("PATCH /api/projects/[id]", error);
-    return NextResponse.json(
-      { error: "Failed to update project" },
-      { status: 500 },
+    return internalApiError(
+      "PATCH /api/projects/[id]",
+      "Failed to update project",
+      error,
     );
   }
 }
@@ -61,10 +62,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
     await db.delete(projects).where(eq(projects.id, id));
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("DELETE /api/projects/[id]", error);
-    return NextResponse.json(
-      { error: "Failed to delete project" },
-      { status: 500 },
+    return internalApiError(
+      "DELETE /api/projects/[id]",
+      "Failed to delete project",
+      error,
     );
   }
 }

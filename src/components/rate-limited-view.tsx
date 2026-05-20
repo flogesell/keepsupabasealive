@@ -71,8 +71,9 @@ export function RateLimitedView({ retryAfter }: { retryAfter: number }) {
           {locked ? "Please wait…" : "Back to dashboard"}
         </Button>
         <p className="text-xs text-muted-foreground">
-          If this keeps happening, check your username and password in Coolify
-          (`DASHBOARD_USER` / `DASHBOARD_PASSWORD`).
+          Username is usually <span className="font-mono">admin</span> unless you
+          set <span className="font-mono">DASHBOARD_USER</span>. Do not leave{" "}
+          <span className="font-mono">DASHBOARD_USER</span> blank in Coolify.
         </p>
       </CardContent>
     </Card>

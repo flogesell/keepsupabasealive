@@ -15,12 +15,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
+import { apiFetch } from "@/lib/api-client";
 
 type Props = {
   onCreated: () => void;
@@ -48,7 +49,7 @@ export function AddProjectDialog({ onCreated }: Props) {
     const form = new FormData(event.currentTarget);
 
     try {
-      const response = await fetch("/api/projects", {
+      const response = await apiFetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -60,7 +61,13 @@ export function AddProjectDialog({ onCreated }: Props) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to add project");
+        const body = (await response.json().catch(() => null)) as {
+          error?: string;
+          hint?: string;
+        } | null;
+        const detail =
+          body?.hint ?? body?.error ?? `HTTP ${response.status}`;
+        throw new Error(detail);
       }
 
       setOpen(false);

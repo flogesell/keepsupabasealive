@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { internalApiError } from "@/lib/api-errors";
 import { getChartData } from "@/lib/projects";
 
 export async function GET(request: Request) {
@@ -8,6 +9,10 @@ export async function GET(request: Request) {
     Math.max(1, Number(searchParams.get("hours") ?? 24)),
   );
 
-  const chart = await getChartData(hours);
-  return NextResponse.json({ chart, hours });
+  try {
+    const chart = await getChartData(hours);
+    return NextResponse.json({ chart, hours });
+  } catch (error) {
+    return internalApiError("GET /api/stats", "Failed to load stats", error);
+  }
 }

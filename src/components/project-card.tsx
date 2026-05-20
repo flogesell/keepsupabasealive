@@ -22,6 +22,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { formatLatency, formatRelativeTime } from "@/lib/supabase";
+import { apiFetch } from "@/lib/api-client";
 
 export type ProjectWithStats = {
   id: string;
@@ -58,7 +59,7 @@ export function ProjectCard({ project, onChange }: Props) {
   async function pingNow() {
     setPinging(true);
     try {
-      await fetch(`/api/projects/${project.id}/ping`, { method: "POST" });
+      await apiFetch(`/api/projects/${project.id}/ping`, { method: "POST" });
       onChange();
     } finally {
       setPinging(false);
@@ -68,7 +69,7 @@ export function ProjectCard({ project, onChange }: Props) {
   async function toggleEnabled() {
     setBusy(true);
     try {
-      await fetch(`/api/projects/${project.id}`, {
+      await apiFetch(`/api/projects/${project.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: !project.enabled }),
@@ -83,7 +84,7 @@ export function ProjectCard({ project, onChange }: Props) {
     if (!confirm(`Delete "${project.name}"?`)) return;
     setBusy(true);
     try {
-      await fetch(`/api/projects/${project.id}`, { method: "DELETE" });
+      await apiFetch(`/api/projects/${project.id}`, { method: "DELETE" });
       onChange();
     } finally {
       setBusy(false);

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { internalApiError } from "@/lib/api-errors";
 import { pingProject } from "@/lib/ping";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -18,7 +19,10 @@ export async function POST(_request: Request, context: RouteContext) {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error("POST /api/projects/[id]/ping", error);
-    return NextResponse.json({ error: "Ping failed" }, { status: 500 });
+    return internalApiError(
+      "POST /api/projects/[id]/ping",
+      "Ping failed",
+      error,
+    );
   }
 }
