@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 320" fill="none" role="img" aria-label="KeepSupabaseAlive banner">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0c0c0e"/>
+      <stop offset="1" stop-color="#12141a"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="900" y1="0" x2="1200" y2="320" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3ecf8e" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#3ecf8e" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="320" fill="url(#bg)"/>
+  <rect width="1200" height="320" fill="url(#glow)"/>
+  <circle cx="180" cy="160" r="72" fill="#3ecf8e" fill-opacity="0.08"/>
+  <circle cx="180" cy="160" r="52" stroke="#3ecf8e" stroke-opacity="0.2" stroke-width="2"/>
+  <path d="M148 188 L180 132 L212 188" stroke="#3ecf8e" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="180" cy="204" r="14" fill="#3ecf8e"/>
+  <path d="M116 228 H244" stroke="#3ecf8e" stroke-opacity="0.3" stroke-width="4" stroke-linecap="round"/>
+  <path d="M128 228 C148 212, 164 236, 180 228 S212 212, 232 228" stroke="#3ecf8e" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <text x="280" y="142" fill="#fafafa" font-family="ui-sans-serif, system-ui, sans-serif" font-size="56" font-weight="700" letter-spacing="-1.5">KeepSupabaseAlive</text>
+  <text x="282" y="188" fill="#a1a1aa" font-family="ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="500">Self-hosted health checks for free-tier Supabase projects</text>
+  <rect x="280" y="214" width="168" height="36" rx="18" fill="#3ecf8e" fill-opacity="0.12" stroke="#3ecf8e" stroke-opacity="0.35"/>
+  <text x="304" y="238" fill="#3ecf8e" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="600">Next.js 16 � shadcn/ui � Docker � Coolify</text>
+</svg>
