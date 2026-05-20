@@ -13,7 +13,7 @@ import {
   recordAuthFailure,
 } from "@/lib/rate-limit";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   if (!isDashboardAuthEnabled() || isPublicPath(request.nextUrl.pathname)) {
     return NextResponse.next();
   }
