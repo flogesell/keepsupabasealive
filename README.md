@@ -138,7 +138,8 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
    | **Source Path** | *(leave empty — Docker creates the volume)* |
    | **Destination Path** | `/data` |
 
-   
+   On first start the image runs a tiny **entrypoint as root** only to `chown` `/data` for the app user, then **`node` runs as UID 1001** (`nextjs`) — you do not need to fix permissions on the host for normal Coolify **volumes**.
+
 5. Add these environment variables:
 
 | Variable | Value | Required |
@@ -210,6 +211,7 @@ When `NODE_ENV=production`, the app **refuses to start** without:
 - [ ] Set all three variables above (use `openssl rand -hex 32`)
 - [ ] Serve the app over **HTTPS** (Coolify / reverse proxy)
 - [ ] Mount `/data` on a **persistent volume** with restricted host access
+- [ ] The container **starts as root only for the entrypoint** (`chown` on `/data`), then runs **Node as UID 1001**
 - [ ] Never store **service_role** keys — anon public keys only
 - [ ] Restrict who can reach the URL (VPN / IP allowlist optional extra layer)
 - [ ] Back up `/data` securely — backups contain encrypted keys
@@ -268,9 +270,15 @@ curl -s -o /dev/null -w "%{http_code}\n" -u admin:YOUR_PASSWORD https://your-dom
 
 ### API returns 500 (`Failed to load projects`, `Failed to create project`, etc.)
 
-1. **SQLite not writable** — Typical with Coolify volumes owned by root. Mount storage at `/data`, set `DATABASE_PATH=/data/keepsupabasealive.db`, and ensure UID **1001** (the Docker image user) can write: on the host, `chown -R 1001:1001 /path/to/volume`.
+1. **SQLite not writable** — Confirm **Persistent Storage** is a **volume** (destination `/data`), not a single-file bind that blocks `-wal` / `-shm` files. Keep `DATABASE_PATH=/data/keepsupabasealive.db`. If you overrode the container **user** in Coolify, switch back to the image default or point `DATABASE_PATH` at a directory that user can write.
 2. **Missing `drizzle/` in the image** — Deploy with the repo **Dockerfile** (it copies `drizzle/`). If you run the standalone bundle elsewhere, set `DRIZZLE_MIGRATIONS_FOLDER` to the folder that contains `meta/_journal.json`.
 3. **Check container logs** — The server logs the underlying error; the JSON body may include a **`hint`** field with a short explanation.
+
+### Container user (Docker / Coolify)
+
+The **long‑running** process is **not root**: it runs as user **`nextjs` (UID 1001)**. Only the entrypoint runs briefly as root to `chown` the **`/data`** volume so SQLite can create the DB and WAL files on typical Coolify/Docker mounts — no manual `chown` on the host.
+
+If your platform **disallows root entirely** (including entrypoint), set a **writable** `DATABASE_PATH` for the user your platform assigns, or use a volume that is already owned by that UID.
 
 ### Limitations
 
