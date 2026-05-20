@@ -1,9 +1,11 @@
 #!/bin/sh
 set -e
 
-# DATABASE_PATH: full path to the SQLite file (directory must allow WAL sidecars).
+# DATABASE_PATH: full path to the SQLite file (parent directory must be writable).
 db_path="${DATABASE_PATH:-/data/keepsupabasealive.db}"
 db_dir=$(dirname "$db_path")
+
+echo "keepsupabasealive: entrypoint uid=$(id -u) gid=$(id -g) db_dir=${db_dir} DATABASE_PATH=${db_path}" >&2
 
 mkdir -p "$db_dir"
 

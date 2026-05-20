@@ -18,6 +18,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_PATH=/data/keepsupabasealive.db
+# Avoid relying on process.cwd() for migrations in standalone; DELETE avoids WAL sidecars on picky volumes
+ENV DRIZZLE_MIGRATIONS_FOLDER=/app/drizzle
+ENV SQLITE_JOURNAL_MODE=DELETE
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
@@ -41,6 +44,9 @@ RUN mkdir -p /data && chown nextjs:nodejs /data
 VOLUME ["/data"]
 
 EXPOSE 3000
+
+# Coolify / some bases may inherit a non-root user; entrypoint must run as root for chown + su-exec
+USER root
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["node", "server.js"]

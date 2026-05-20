@@ -52,7 +52,7 @@ Many developers run side projects on the free tier and forget to touch them — 
 | 📈 **Activity chart** | shadcn/ui stacked area chart (24h / 3d / 7d) |
 | ⏱️ **Built-in scheduler** | Cron-style checks every minute; pings when due |
 | ⚡ **Manual ping** | Trigger an immediate health check |
-| 🐳 **Self-hosted** | SQLite, Docker, [Coolify](https://coolify.io) — your data stays on your server |
+| 🐳 **Self-hosted** | **SQLite only** (one file + WAL), Docker, [Coolify](https://coolify.io) — no other database backends |
 | 🔐 **Dashboard auth** | Optional HTTP Basic Auth via `DASHBOARD_PASSWORD` (recommended in production) |
 | 🛡️ **Safe by design** | Auth health endpoint only — no database queries, no `service_role` |
 
@@ -120,6 +120,8 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
 
 ## Deploy with Coolify
 
+**Persistence:** this app **only** supports **SQLite** at `DATABASE_PATH` (default `/data/keepsupabasealive.db` in Docker). There is no PostgreSQL or other database option — mount a **directory volume** on `/data` as documented below.
+
 <p align="left">
   <img src="https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/coolify.svg" alt="Coolify" width="28" height="28" align="left" />
   &nbsp; Add this GitHub repository as your Coolify application source.
@@ -138,7 +140,7 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
    | **Source Path** | *(leave empty — Docker creates the volume)* |
    | **Destination Path** | `/data` |
 
-   On first start the entrypoint runs briefly as **root** to `chown` the database **directory**, then **`node` runs as UID 1001** (`nextjs`). Do **not** mount a single file to `DATABASE_PATH` — SQLite needs the **folder** for `-wal` / `-shm` files; use a **volume on `/data`** with an empty Source Path.
+   On first start the entrypoint runs briefly as **root** to `chown` the database **directory**, then **`node` runs as UID 1001** (`nextjs`). Do **not** mount a single file to `DATABASE_PATH` — use a **volume on `/data`** with an empty Source Path. The production image defaults to **`SQLITE_JOURNAL_MODE=DELETE`** (no `-wal` / `-shm`); set `SQLITE_JOURNAL_MODE=WAL` only if you prefer WAL and your volume supports it.
 
 5. Add these environment variables:
 
@@ -152,6 +154,13 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
 | `PORT` | `3000` | Usually set by Coolify |
 
 6. Set health check path to **`/api/health`** → **Deploy**.
+
+**If it still fails with HTTP 500**
+
+- In deploy logs, search for **`keepsupabasealive:`** (entrypoint) and **`[keepsupabasealive]`** (Node startup). If you see **`instrumentation failed`**, the message is the real error (often migrations path or SQLite open).
+- Coolify may log **“Build step skipped”** when the Git commit did not change — you can still be running an **old image**. Use **Redeploy / Rebuild without cache** (or an empty commit) so the image picks up the latest `Dockerfile` and `docker-entrypoint.sh`.
+- In the service **Docker Compose** (or advanced) section, do **not** override **`user:`** or **`entrypoint:`** unless you know you need to — the image expects root for the entrypoint, then `nextjs` for `node`.
+- The Docker image sets **`DRIZZLE_MIGRATIONS_FOLDER=/app/drizzle`** and **`SQLITE_JOURNAL_MODE=DELETE`** by default so migrations and SQLite work without relying on `cwd` and without WAL extra files.
 
 Coolify builds from the repo on every push — nothing else to publish.
 

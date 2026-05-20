@@ -53,7 +53,7 @@ export function getDb() {
     const journal = process.env.SQLITE_JOURNAL_MODE?.trim().toUpperCase();
     const allowedJournal = new Set(["DELETE", "TRUNCATE", "PERSIST", "WAL", "OFF"]);
     sqlite.pragma(
-      allowedJournal.has(journal ?? "")
+      journal && allowedJournal.has(journal)
         ? `journal_mode = ${journal}`
         : "journal_mode = WAL",
     );
