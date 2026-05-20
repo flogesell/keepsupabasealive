@@ -93,7 +93,7 @@ Only the public **anon** key is stored (required by Supabase’s gateway), and o
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) 1.2+ (recommended) or Node.js 20+
+- [Bun](https://bun.sh) 1.2+ (recommended) or Node.js 24+ (LTS)
 
 ### Local development
 
@@ -146,7 +146,7 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
 
 | Variable | Value | Required |
 |----------|-------|----------|
-| `DATABASE_PATH` | `/data/keepsupabasealive.db` | Yes |
+| `DATABASE_PATH` | `/data/keepsupabasealive.db` | **Yes**|
 | `DASHBOARD_PASSWORD` | Long random password | **Yes (production)** |
 | `ENCRYPTION_KEY` | `openssl rand -hex 32` | **Yes (production)** |
 | `CRON_SECRET` | `openssl rand -hex 32` | **Yes (production)** |
@@ -155,14 +155,6 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
 
 6. Set health check path to **`/api/health`** → **Deploy**.
 
-**If it still fails with HTTP 500**
-
-- In deploy logs, search for **`keepsupabasealive:`** (entrypoint) and **`[keepsupabasealive]`** (Node startup). If you see **`instrumentation failed`**, the message is the real error (often migrations path or SQLite open).
-- Coolify may log **“Build step skipped”** when the Git commit did not change — you can still be running an **old image**. Use **Redeploy / Rebuild without cache** (or an empty commit) so the image picks up the latest `Dockerfile` and `docker-entrypoint.sh`.
-- In the service **Docker Compose** (or advanced) section, do **not** override **`user:`** or **`entrypoint:`** unless you know you need to — the image expects root for the entrypoint, then `nextjs` for `node`.
-- The Docker image sets **`DRIZZLE_MIGRATIONS_FOLDER=/app/drizzle`** and **`SQLITE_JOURNAL_MODE=DELETE`** by default so migrations and SQLite work without relying on `cwd` and without WAL extra files.
-
-Coolify builds from the repo on every push — nothing else to publish.
 
 ### Docker Compose
 

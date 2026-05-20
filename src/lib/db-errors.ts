@@ -11,6 +11,18 @@ function hintForSingleError(error: unknown): string | undefined {
   const e = error as NodeJS.ErrnoException & { message?: string };
   const msg = String(e.message ?? "");
 
+  if (msg.includes("not yet supported in Bun")) {
+    return "The app is running under Bun, but SQLite requires Node.js. Use the repository Dockerfile (Node 24 LTS runner) and clear any Coolify custom start command that uses bun.";
+  }
+
+  if (
+    msg.includes("ERR_DLOPEN_FAILED") ||
+    msg.includes("symbol not found") ||
+    msg.includes("better_sqlite3.node")
+  ) {
+    return "The SQLite native module failed to load. Redeploy with a fresh Docker build (the image compiles better-sqlite3 for Node 24 LTS). Do not copy node_modules from a Bun install into the runtime image.";
+  }
+
   if (
     msg.includes("Drizzle migrations not found") ||
     msg.includes("meta/_journal.json") ||

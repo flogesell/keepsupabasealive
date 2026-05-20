@@ -33,6 +33,18 @@ export function validateProductionEnv(): void {
       "ENCRYPTION_KEY must be 64 hex characters (openssl rand -hex 32) or a passphrase of at least 16 characters.",
     );
   }
+
+  const dbPath = process.env.DATABASE_PATH?.trim();
+  if (!dbPath || !dbPath.startsWith("/")) {
+    throw new Error(
+      "DATABASE_PATH must be an absolute path in production. For Docker/Coolify use /data/keepsupabasealive.db — not ./data/...",
+    );
+  }
+  if (!dbPath.startsWith("/data/")) {
+    throw new Error(
+      "DATABASE_PATH must be under /data/ in production. Mount a volume at /data and set DATABASE_PATH=/data/keepsupabasealive.db",
+    );
+  }
 }
 
 export function isProduction(): boolean {

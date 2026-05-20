@@ -1,3 +1,4 @@
+# Build with Bun (fast). Run with Node 24 LTS (better-sqlite3 is a Node native addon — not supported by Bun).
 FROM oven/bun:1-alpine AS base
 RUN apk add --no-cache libc6-compat python3 make g++
 
@@ -13,12 +14,18 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
 
-FROM base AS runner
+# Native modules must be compiled against Node 24 — copying from `bun install` breaks at runtime (ABI mismatch).
+FROM node:24-alpine AS native-deps
+WORKDIR /app
+RUN apk add --no-cache python3 make g++
+COPY package.json ./
+RUN npm install better-sqlite3@12.10.0 bindings file-uri-to-path --omit=dev
+
+FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_PATH=/data/keepsupabasealive.db
-# Avoid relying on process.cwd() for migrations in standalone; DELETE avoids WAL sidecars on picky volumes
 ENV DRIZZLE_MIGRATIONS_FOLDER=/app/drizzle
 ENV SQLITE_JOURNAL_MODE=DELETE
 ENV PORT=3000
@@ -35,18 +42,14 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
-# Native module for SQLite (excluded from standalone bundle)
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/bindings ./node_modules/bindings
-COPY --from=deps --chown=nextjs:nodejs /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
+COPY --from=native-deps --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+COPY --from=native-deps --chown=nextjs:nodejs /app/node_modules/bindings ./node_modules/bindings
+COPY --from=native-deps --chown=nextjs:nodejs /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 
 RUN mkdir -p /data && chown nextjs:nodejs /data
 VOLUME ["/data"]
 
 EXPOSE 3000
-
-# Coolify / some bases may inherit a non-root user; entrypoint must run as root for chown + su-exec
 USER root
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["node", "server.js"]
