@@ -6,11 +6,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/keepsupabasealive/keepsupabasealive.git"
+    "url": "git+https://github.com/flogesell/keepsupabasealive.git"
   },
-  "homepage": "https://github.com/keepsupabasealive/keepsupabasealive#readme",
+  "homepage": "https://github.com/flogesell/keepsupabasealive#readme",
   "bugs": {
-    "url": "https://github.com/keepsupabasealive/keepsupabasealive/issues"
+    "url": "https://github.com/flogesell/keepsupabasealive/issues"
   },
   "keywords": [
     "supabase",

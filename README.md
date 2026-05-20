@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/keepsupabasealive/keepsupabasealive">
+  <a href="https://github.com/flogesell/keepsupabasealive">
     <img src="./docs/logo.svg" alt="KeepSupabaseAlive logo" width="120" />
   </a>
 </p>
@@ -98,7 +98,7 @@ Only the public **anon** key is stored (required by Supabase’s gateway), and o
 ### Local development
 
 ```bash
-git clone https://github.com/keepsupabasealive/keepsupabasealive.git
+git clone https://github.com/flogesell/keepsupabasealive.git
 cd keepsupabasealive
 cp .env.example .env
 npm install
@@ -267,7 +267,7 @@ Migrations run automatically on startup.
 
 ## Contributing
 
-Contributions are welcome! Please open an [issue](https://github.com/keepsupabasealive/keepsupabasealive/issues) or [pull request](https://github.com/keepsupabasealive/keepsupabasealive/pulls).
+Contributions are welcome! Please open an [issue](https://github.com/flogesell/keepsupabasealive/issues) or [pull request](https://github.com/flogesell/keepsupabasealive/pulls).
 
 ## License
 
