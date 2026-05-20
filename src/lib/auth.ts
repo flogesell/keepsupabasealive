@@ -1,6 +1,7 @@
 const PUBLIC_PATHS = new Set([
   "/api/health",
   "/api/cron",
+  "/rate-limited",
   "/favicon.svg",
   "/logo.svg",
 ]);

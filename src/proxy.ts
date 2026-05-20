@@ -22,10 +22,23 @@ export function proxy(request: NextRequest) {
 
   if (isAuthRateLimited(ip)) {
     const retryAfter = authRateLimitRetryAfterSeconds(ip);
-    return new NextResponse("Too many failed login attempts. Try again later.", {
-      status: 429,
-      headers: { "Retry-After": String(retryAfter) },
-    });
+    const headers = { "Retry-After": String(retryAfter) };
+
+    if (request.nextUrl.pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        {
+          error: "Too many failed login attempts",
+          retryAfter,
+        },
+        { status: 429, headers },
+      );
+    }
+
+    const url = request.nextUrl.clone();
+    url.pathname = "/rate-limited";
+    url.search = `?retry=${retryAfter}`;
+
+    return NextResponse.rewrite(url, { status: 429, headers });
   }
 
   if (verifyDashboardBasicAuth(request.headers.get("authorization"))) {

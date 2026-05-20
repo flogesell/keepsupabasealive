@@ -220,7 +220,7 @@ When `NODE_ENV=production`, the app **refuses to start** without:
 | Layer | Behavior |
 |-------|----------|
 | **Dashboard & API** | HTTP Basic Auth when `DASHBOARD_PASSWORD` is set |
-| **Failed logins** | Rate limited (5 failures / 15 min per IP) |
+| **Failed logins** | Rate limited (5 failures / 15 min per IP) with a `/rate-limited` error page |
 | **Anon keys in DB** | Encrypted at rest with `ENCRYPTION_KEY` (AES-256-GCM) |
 | **API responses** | Anon keys never returned from `GET /api/projects` |
 | **SQL injection** | Drizzle ORM + Zod validation — no raw user SQL |
