@@ -50,7 +50,13 @@ export function getDb() {
       );
     }
 
-    sqlite.pragma("journal_mode = WAL");
+    const journal = process.env.SQLITE_JOURNAL_MODE?.trim().toUpperCase();
+    const allowedJournal = new Set(["DELETE", "TRUNCATE", "PERSIST", "WAL", "OFF"]);
+    sqlite.pragma(
+      allowedJournal.has(journal ?? "")
+        ? `journal_mode = ${journal}`
+        : "journal_mode = WAL",
+    );
     sqlite.pragma("foreign_keys = ON");
 
     const db = drizzle(sqlite, { schema });

@@ -138,7 +138,7 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
    | **Source Path** | *(leave empty — Docker creates the volume)* |
    | **Destination Path** | `/data` |
 
-   On first start the image runs a tiny **entrypoint as root** only to `chown` `/data` for the app user, then **`node` runs as UID 1001** (`nextjs`) — you do not need to fix permissions on the host for normal Coolify **volumes**.
+   On first start the entrypoint runs briefly as **root** to `chown` the database **directory**, then **`node` runs as UID 1001** (`nextjs`). Do **not** mount a single file to `DATABASE_PATH` — SQLite needs the **folder** for `-wal` / `-shm` files; use a **volume on `/data`** with an empty Source Path.
 
 5. Add these environment variables:
 
@@ -173,6 +173,8 @@ Data persists in the `keepsupabasealive-data` volume.
 | `ENCRYPTION_KEY` | — | AES-256-GCM encryption for anon keys at rest (required in production) |
 | `CRON_SECRET` | — | Bearer token for `POST /api/cron` (required in production) |
 | `DISABLE_SCHEDULER` | `false` | Set `true` to disable built-in pings |
+| `SQLITE_JOURNAL_MODE` | `WAL` | Use `DELETE` only if the DB volume cannot create WAL sidecars (rare) |
+| `DRIZZLE_MIGRATIONS_FOLDER` | *(auto)* | Absolute path to `drizzle/` if not next to the server |
 | `PORT` | `3000` | HTTP port |
 
 Generate secrets:
@@ -270,7 +272,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -u admin:YOUR_PASSWORD https://your-dom
 
 ### API returns 500 (`Failed to load projects`, `Failed to create project`, etc.)
 
-1. **SQLite not writable** — Confirm **Persistent Storage** is a **volume** (destination `/data`), not a single-file bind that blocks `-wal` / `-shm` files. Keep `DATABASE_PATH=/data/keepsupabasealive.db`. If you overrode the container **user** in Coolify, switch back to the image default or point `DATABASE_PATH` at a directory that user can write.
+1. **SQLite not writable** — Use a **directory volume** on `/data` (empty Source Path), not a **file** mount for the `.db` file. In Coolify, clear any **custom container user** so the entrypoint can `chown` once. Check deploy logs for **`keepsupabasealive:`** — the container exits there with a concrete hint if the directory is not writable. As a last resort set `SQLITE_JOURNAL_MODE=DELETE`.
 2. **Missing `drizzle/` in the image** — Deploy with the repo **Dockerfile** (it copies `drizzle/`). If you run the standalone bundle elsewhere, set `DRIZZLE_MIGRATIONS_FOLDER` to the folder that contains `meta/_journal.json`.
 3. **Check container logs** — The server logs the underlying error; the JSON body may include a **`hint`** field with a short explanation.
 

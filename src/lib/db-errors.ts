@@ -29,7 +29,7 @@ function hintForSingleError(error: unknown): string | undefined {
     msg.includes("SQLITE_CANTOPEN") ||
     msg.includes("readonly database")
   ) {
-    return "The SQLite database or its directory is not writable. With Coolify, mount a **directory volume** at `/data` and keep `DATABASE_PATH=/data/keepsupabasealive.db`. The image entrypoint fixes `/data` ownership on start; if your platform runs the container as a fixed non-root user without that step, point `DATABASE_PATH` at a path that user can write.";
+    return "SQLite cannot write its database directory (WAL files need the same folder as the .db). Check container logs for lines starting with `keepsupabasealive:` — usually: Coolify **volume** on `/data` (not a **file** mount), or clear a **custom container user**, or set `SQLITE_JOURNAL_MODE=DELETE` if the filesystem rejects WAL.";
   }
 
   return undefined;
