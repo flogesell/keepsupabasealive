@@ -1,17 +1,17 @@
-FROM node:22-alpine AS base
+FROM oven/bun:1-alpine AS base
 RUN apk add --no-cache libc6-compat python3 make g++
 
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN bun run build
 
 FROM base AS runner
 WORKDIR /app

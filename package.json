@@ -12,6 +12,7 @@
   "bugs": {
     "url": "https://github.com/flogesell/keepsupabasealive/issues"
   },
+  "packageManager": "bun@1.3.4",
   "keywords": [
     "supabase",
     "keep-alive",

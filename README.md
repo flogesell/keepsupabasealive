@@ -12,6 +12,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-3ecf8e?style=flat-square" alt="MIT License" /></a>
+  <a href="https://bun.sh"><img src="https://img.shields.io/badge/Bun-000?style=flat-square&logo=bun&logoColor=white" alt="Bun" /></a>
   <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js&logoColor=white" alt="Next.js 16" /></a>
   <a href="https://www.typescriptlang.org"><img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" /></a>
   <a href="https://ui.shadcn.com"><img src="https://img.shields.io/badge/shadcn%2Fui-charts-000?style=flat-square" alt="shadcn/ui" /></a>
@@ -92,8 +93,7 @@ Only the public **anon** key is stored (required by Supabase’s gateway), and o
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org) 20+
-- npm, pnpm, or bun
+- [Bun](https://bun.sh) 1.2+ (recommended) or Node.js 20+
 
 ### Local development
 
@@ -101,8 +101,8 @@ Only the public **anon** key is stored (required by Supabase’s gateway), and o
 git clone https://github.com/flogesell/keepsupabasealive.git
 cd keepsupabasealive
 cp .env.example .env
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Open **http://localhost:3000** → **Add project** and fill in:
@@ -128,7 +128,17 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
 1. In **Coolify** → **+ New** → **Application**.
 2. Under **Source**, choose **GitHub** (or GitLab / Gitea) and select **this repository** — public or private after authorizing Coolify once.
 3. Pick your branch (e.g. `main`) and set the build pack to **Dockerfile**.
-4. Mount a **persistent volume** at `/data`.
+4. Add **Persistent Storage** (application → **Storages** → **+ Add**).
+
+   **Volume mount (recommended)**
+
+   | Field | Value |
+   |-------|-------|
+   | **Name** | `data` (Coolify may append your app UUID to avoid clashes) |
+   | **Source Path** | *(leave empty — Docker creates the volume)* |
+   | **Destination Path** | `/data` |
+
+   
 5. Add these environment variables:
 
 | Variable | Value | Required |
@@ -241,11 +251,11 @@ With `NODE_ENV` unset or `development`, auth and encryption env vars are **optio
 ## Development
 
 ```bash
-npm run dev          # Development server
-npm run build        # Production build
-npm run start        # Production server
-npm run lint         # ESLint
-npm run db:generate  # Generate Drizzle migrations
+bun run dev          # Development server
+bun run build        # Production build
+bun run start        # Production server
+bun run lint         # ESLint
+bun run db:generate  # Generate Drizzle migrations
 ```
 
 Migrations run automatically on startup.
