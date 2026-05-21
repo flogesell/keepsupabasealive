@@ -14,12 +14,12 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN bun run build
 
-# Native modules must be compiled against Node 24 — copying from `bun install` breaks at runtime (ABI mismatch).
+# Compile better-sqlite3 for Node 24 only — do NOT copy the app package.json here or npm installs Next/shadcn (build timeout on Coolify).
 FROM node:24-alpine AS native-deps
-WORKDIR /app
+WORKDIR /deps
 RUN apk add --no-cache python3 make g++
-COPY package.json ./
-RUN npm install better-sqlite3@12.10.0 bindings file-uri-to-path --omit=dev
+COPY docker/sqlite-native-package.json ./package.json
+RUN npm install --omit=dev --no-audit --no-fund
 
 FROM node:24-alpine AS runner
 WORKDIR /app
@@ -42,9 +42,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/drizzle ./drizzle
-COPY --from=native-deps --chown=nextjs:nodejs /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
-COPY --from=native-deps --chown=nextjs:nodejs /app/node_modules/bindings ./node_modules/bindings
-COPY --from=native-deps --chown=nextjs:nodejs /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
+COPY --from=native-deps --chown=nextjs:nodejs /deps/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+COPY --from=native-deps --chown=nextjs:nodejs /deps/node_modules/bindings ./node_modules/bindings
+COPY --from=native-deps --chown=nextjs:nodejs /deps/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 
 RUN mkdir -p /data && chown nextjs:nodejs /data
 VOLUME ["/data"]
