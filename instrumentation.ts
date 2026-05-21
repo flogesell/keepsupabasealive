@@ -16,8 +16,8 @@ export async function register() {
     const { migratePlaintextSecrets } = await import("./src/lib/migrate-secrets");
     await migratePlaintextSecrets();
 
-    const { startScheduler } = await import("./src/lib/scheduler");
-    startScheduler();
+    const { ensureSchedulerStarted } = await import("./src/lib/scheduler");
+    ensureSchedulerStarted();
   } catch (error) {
     console.error("[keepsupabasealive] instrumentation failed — app may return 500 for API routes", error);
     throw error;

@@ -1,7 +1,7 @@
 "use client";
 
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { Pencil } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -15,24 +15,33 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api-client";
 import { INTERVAL_OPTIONS } from "@/lib/project-intervals";
+import type { ProjectWithStats } from "./project-card";
 
 type Props = {
-  onCreated: () => void;
+  project: ProjectWithStats;
+  onUpdated: () => void;
 };
 
-export function AddProjectDialog({ onCreated }: Props) {
+export function EditProjectDialog({ project, onUpdated }: Props) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [interval, setInterval] = useState("360");
+  const [interval, setInterval] = useState(String(project.intervalMinutes));
+
+  useEffect(() => {
+    if (open) {
+      setInterval(String(project.intervalMinutes));
+      setError(null);
+    }
+  }, [open, project.intervalMinutes]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -40,31 +49,36 @@ export function AddProjectDialog({ onCreated }: Props) {
     setError(null);
 
     const form = new FormData(event.currentTarget);
+    const anonKey = String(form.get("anonKey") ?? "").trim();
+
+    const body: Record<string, unknown> = {
+      name: form.get("name"),
+      url: form.get("url"),
+      intervalMinutes: Number(interval),
+    };
+    if (anonKey.length >= 20) {
+      body.anonKey = anonKey;
+    }
 
     try {
-      const response = await apiFetch("/api/projects", {
-        method: "POST",
+      const response = await apiFetch(`/api/projects/${project.id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: form.get("name"),
-          url: form.get("url"),
-          anonKey: form.get("anonKey"),
-          intervalMinutes: Number(interval),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
+        const payload = (await response.json().catch(() => null)) as {
           error?: string;
           hint?: string;
         } | null;
-        const detail =
-          body?.hint ?? body?.error ?? `HTTP ${response.status}`;
-        throw new Error(detail);
+        throw new Error(
+          payload?.hint ?? payload?.error ?? `HTTP ${response.status}`,
+        );
       }
 
       setOpen(false);
-      onCreated();
+      onUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -74,59 +88,62 @@ export function AddProjectDialog({ onCreated }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="bg-[var(--supabase)] text-zinc-950 hover:bg-[var(--supabase)]/90" />}>
-        <Plus data-icon="inline-start" />
-        Add project
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button type="button" variant="secondary" size="sm">
+            <Pencil />
+            Edit
+          </Button>
+        }
+      />
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Supabase project</DialogTitle>
+          <DialogTitle>Edit project</DialogTitle>
           <DialogDescription>
-            Uses your public <strong>anon</strong> key with{" "}
-            <code className="text-xs">/auth/v1/health</code> only (required by
-            Supabase&apos;s gateway — never touches your database).
+            Update name, URL, or ping interval. Leave the anon key blank to keep
+            the current key.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="name">Project name</Label>
-            <Input id="name" name="name" required placeholder="My side project" />
+            <Label htmlFor={`edit-name-${project.id}`}>Project name</Label>
+            <Input
+              id={`edit-name-${project.id}`}
+              name="name"
+              required
+              defaultValue={project.name}
+            />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="url">Project URL or reference ID</Label>
+            <Label htmlFor={`edit-url-${project.id}`}>Project URL or reference ID</Label>
             <Input
-              id="url"
+              id={`edit-url-${project.id}`}
               name="url"
               required
-              placeholder="https://abcdefgh.supabase.co or abcdefgh"
+              defaultValue={project.url}
             />
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="anonKey">Anon key (public)</Label>
+            <Label htmlFor={`edit-anonKey-${project.id}`}>Anon key (optional)</Label>
             <Input
-              id="anonKey"
+              id={`edit-anonKey-${project.id}`}
               name="anonKey"
               type="password"
-              required
               autoComplete="off"
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              placeholder="Leave blank to keep current key"
             />
-            <p className="text-xs text-muted-foreground">
-              Supabase → Project Settings → API → anon public. Do not use
-              service_role.
-            </p>
           </div>
 
           <div className="grid gap-2">
-            <Label htmlFor="interval">Ping interval</Label>
+            <Label htmlFor={`edit-interval-${project.id}`}>Ping interval</Label>
             <Select
               value={interval}
               onValueChange={(value) => value && setInterval(value)}
             >
-              <SelectTrigger id="interval">
+              <SelectTrigger id={`edit-interval-${project.id}`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -158,7 +175,7 @@ export function AddProjectDialog({ onCreated }: Props) {
               disabled={loading}
               className="bg-[var(--supabase)] text-zinc-950 hover:bg-[var(--supabase)]/90"
             >
-              {loading ? "Adding…" : "Add project"}
+              {loading ? "Saving…" : "Save changes"}
             </Button>
           </DialogFooter>
         </form>

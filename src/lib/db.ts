@@ -4,6 +4,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import fs from "fs";
 import path from "path";
 import { assertMigrationsFolder } from "./db-errors";
+import { ensureSchedulerStarted } from "./scheduler";
 import * as schema from "./schema";
 
 const globalForDb = globalThis as unknown as {
@@ -73,6 +74,10 @@ export function getDb() {
 
     globalForDb.sqlite = sqlite;
     globalForDb.db = db;
+
+    if (process.env.NODE_ENV === "production") {
+      ensureSchedulerStarted();
+    }
   }
 
   return globalForDb.db;

@@ -1,22 +1,45 @@
 import cron from "node-cron";
 
-let started = false;
+const globalForScheduler = globalThis as unknown as {
+  schedulerStarted?: boolean;
+  schedulerRunning?: boolean;
+};
 
-export function startScheduler() {
-  if (started || process.env.DISABLE_SCHEDULER === "true") return;
-  started = true;
-
-  cron.schedule("* * * * *", async () => {
-    try {
-      const { runDuePings } = await import("./ping");
-      const count = await runDuePings();
-      if (count > 0) {
-        console.log(`[scheduler] Pinged ${count} project(s)`);
-      }
-    } catch (error) {
-      console.error("[scheduler] Error running pings:", error);
+async function runDuePingsTick(label: string) {
+  if (globalForScheduler.schedulerRunning) return;
+  globalForScheduler.schedulerRunning = true;
+  try {
+    const { runDuePings } = await import("./ping");
+    const count = await runDuePings();
+    if (count > 0) {
+      console.log(`[scheduler] ${label}: pinged ${count} project(s)`);
     }
+  } catch (error) {
+    console.error(`[scheduler] ${label} failed:`, error);
+  } finally {
+    globalForScheduler.schedulerRunning = false;
+  }
+}
+
+/** Idempotent — safe from instrumentation and first getDb() in production. */
+export function ensureSchedulerStarted() {
+  if (process.env.DISABLE_SCHEDULER === "true") return;
+  if (globalForScheduler.schedulerStarted) return;
+  globalForScheduler.schedulerStarted = true;
+
+  cron.schedule("* * * * *", () => {
+    void runDuePingsTick("cron");
   });
 
-  console.log("[scheduler] Started — checking for due pings every minute");
+  // Don't wait until the next minute boundary after deploy / restart.
+  setTimeout(() => {
+    void runDuePingsTick("startup");
+  }, 3_000);
+
+  console.log("[scheduler] Started — due pings every minute (+ run 3s after startup)");
+}
+
+/** @deprecated Use ensureSchedulerStarted */
+export function startScheduler() {
+  ensureSchedulerStarted();
 }

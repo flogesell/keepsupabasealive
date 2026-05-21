@@ -120,5 +120,10 @@ export async function createProject(data: {
     updatedAt: now,
   });
 
+  // First health check soon after add (scheduler also runs on interval).
+  void import("./ping").then(({ pingProject }) => pingProject(id)).catch((err) => {
+    console.error("[projects] Initial ping after create failed:", err);
+  });
+
   return id;
 }

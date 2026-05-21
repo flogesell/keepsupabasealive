@@ -146,7 +146,7 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
 
 | Variable | Value | Required |
 |----------|-------|----------|
-| `DATABASE_PATH` | `/data/keepsupabasealive.db` | **Yes**|
+| `DATABASE_PATH` | `/data/keepsupabasealive.db` | **Yes** — never `./data/...` in Coolify |
 | `DASHBOARD_PASSWORD` | Long random password | **Yes (production)** |
 | `ENCRYPTION_KEY` | `openssl rand -hex 32` | **Yes (production)** |
 | `CRON_SECRET` | `openssl rand -hex 32` | **Yes (production)** |
@@ -155,6 +155,13 @@ Dashboard URLs like `https://supabase.com/dashboard/project/<ref>` are also acce
 
 6. Set health check path to **`/api/health`** → **Deploy**.
 
+**Scheduled health checks:** the app runs an in-process scheduler (every minute). After deploy, logs should show `[scheduler] Started`. If automatic pings still do not run, add a Coolify **Scheduled Task** (every minute):
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer YOUR_CRON_SECRET" https://your-domain.example/api/cron
+```
+
+Do not set `DISABLE_SCHEDULER=true` unless you rely on that external cron only.
 
 ### Docker Compose
 

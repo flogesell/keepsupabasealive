@@ -21,6 +21,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { EditProjectDialog } from "@/components/edit-project-dialog";
 import { formatLatency, formatRelativeTime } from "@/lib/supabase";
 import { apiFetch } from "@/lib/api-client";
 
@@ -167,6 +168,7 @@ export function ProjectCard({ project, onChange }: Props) {
       </CardContent>
 
       <CardFooter className="flex flex-wrap gap-2">
+        <EditProjectDialog project={project} onUpdated={onChange} />
         <Button
           type="button"
           variant="secondary"
