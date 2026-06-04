@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "KeepSupabaseAlive",
   description:
-    "Keep your free-tier Supabase projects alive with scheduled Auth health checks and a simple dashboard.",
+    "Keep your free-tier Supabase projects alive with scheduled database pings and a simple dashboard.",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/logo.svg", type: "image/svg+xml" }],

@@ -148,9 +148,9 @@ export function ProjectCard({ project, onChange }: Props) {
         )}
         {latest && (
           <div className="col-span-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1" title={latest.success && latest.statusCode === 400 ? "HTTP 400 is expected — GoTrue queried the DB and rejected the keepalive credentials" : undefined}>
               <Activity className="h-3.5 w-3.5" />
-              HTTP {latest.statusCode ?? "—"}
+              HTTP {latest.statusCode ?? "—"}{latest.success && latest.statusCode === 400 ? " (expected)" : ""}
             </span>
             <span className="inline-flex items-center gap-1">
               <Zap className="h-3.5 w-3.5" />

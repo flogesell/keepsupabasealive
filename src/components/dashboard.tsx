@@ -114,9 +114,9 @@ export function Dashboard() {
             </h1>
           </div>
           <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-            Health checks to <code className="text-xs">/auth/v1/health</code>{" "}
-            keep free-tier projects from pausing — Auth only, no database
-            queries.
+            Scheduled pings to <code className="text-xs">/auth/v1/token</code>{" "}
+            keep free-tier projects from pausing — anon key only, no accounts
+            created.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ export function Dashboard() {
           <div>
             <CardTitle>Health check activity</CardTitle>
             <CardDescription>
-              Successful vs failed pings to the Auth health endpoint
+              Successful vs failed pings to the auth token endpoint
             </CardDescription>
           </div>
           <div className="flex gap-2">

@@ -50,20 +50,29 @@ export function normalizeSupabaseUrl(input: string): string {
 
 export function formatRelativeTime(date: Date): string {
   const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return "just now";
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  if (seconds < 60) return rtf.format(-seconds, "second");
+  if (seconds < 3600) return rtf.format(-Math.floor(seconds / 60), "minute");
+  if (seconds < 86400) return rtf.format(-Math.floor(seconds / 3600), "hour");
+  return rtf.format(-Math.floor(seconds / 86400), "day");
 }
 
 export function formatLatency(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
+  if (ms < 1000) return `${ms.toLocaleString()}ms`;
+  return `${(ms / 1000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}s`;
 }
 
-/** Auth health endpoint used by Supabase pause-prevention tooling. */
+/**
+ * GoTrue password-grant endpoint.
+ * Sending fake credentials forces GoTrue to query auth.users — a real
+ * PostgreSQL round-trip that Supabase counts as project activity.
+ * Expects HTTP 400 ("invalid_grant") for a healthy project; 5xx or null
+ * status indicates the project is paused or unreachable.
+ * `/auth/v1/health` is intentionally excluded from Supabase's activity
+ * tracking, which is why we use this endpoint instead.
+ */
 export function healthCheckUrl(projectUrl: string): string {
-  return `${normalizeSupabaseUrl(projectUrl)}/auth/v1/health`;
+  return `${normalizeSupabaseUrl(projectUrl)}/auth/v1/token?grant_type=password`;
 }
 
 export function parseSupabaseErrorBody(body: string): string | null {

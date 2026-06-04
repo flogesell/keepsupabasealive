@@ -1,6 +1,6 @@
 {
   "name": "keepsupabasealive",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Keep free-tier Supabase projects alive with scheduled health pings and a dashboard",
   "private": false,
   "license": "MIT",

@@ -82,9 +82,8 @@ export function AddProjectDialog({ onCreated }: Props) {
         <DialogHeader>
           <DialogTitle>Add Supabase project</DialogTitle>
           <DialogDescription>
-            Uses your public <strong>anon</strong> key with{" "}
-            <code className="text-xs">/auth/v1/health</code> only (required by
-            Supabase&apos;s gateway — never touches your database).
+            Uses your public <strong>anon</strong> key — no accounts created,
+            no <code className="text-xs">service_role</code> key needed.
           </DialogDescription>
         </DialogHeader>
 

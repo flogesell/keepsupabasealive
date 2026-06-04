@@ -1,7 +1,7 @@
 "use client";
 
 import { BarChart3 } from "lucide-react";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
     Bar,
     BarChart,
@@ -17,6 +17,7 @@ import {
     ChartTooltipContent,
     type ChartConfig,
 } from "@/components/ui/chart";
+import { formatLatency } from "@/lib/supabase";
 
 export type ChartPoint = {
   time: string;
@@ -67,30 +68,20 @@ export function fillChartGaps(data: ChartPoint[], hours: number): ChartPoint[] {
   return buckets;
 }
 
-function formatBucketLabel(value: string, hours: number) {
-  const date = new Date(value.replace(" ", "T") + ":00");
-  if (hours <= 24) {
-    return date.toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-  });
+function parseBucketDate(value: string): Date {
+  return new Date(value.replace(" ", "T") + ":00");
 }
 
 function ChartSummary({ data }: { data: ChartPoint[] }) {
   const totalSuccess = data.reduce((s, r) => s + r.success, 0);
   const totalFailed = data.reduce((s, r) => s + r.failed, 0);
   const total = totalSuccess + totalFailed;
-  const withLatency = data.filter((r) => r.success + r.failed > 0);
+  // Weighted average: weight each bucket's avg by its success count to avoid
+  // treating a bucket with 1 ping the same as one with 20.
   const avgLatency =
-    withLatency.length > 0
+    totalSuccess > 0
       ? Math.round(
-          withLatency.reduce((s, r) => s + r.avgLatency, 0) / withLatency.length,
+          data.reduce((s, r) => s + r.avgLatency * r.success, 0) / totalSuccess,
         )
       : 0;
 
@@ -100,11 +91,13 @@ function ChartSummary({ data }: { data: ChartPoint[] }) {
         { label: "Total checks", value: total.toLocaleString() },
         {
           label: "Success rate",
-          value: total > 0 ? `${Math.round((totalSuccess / total) * 100)}%` : "—",
+          value: total > 0
+            ? (totalSuccess / total).toLocaleString(undefined, { style: "percent", maximumFractionDigits: 0 })
+            : "—",
         },
         {
           label: "Avg latency",
-          value: avgLatency > 0 ? `${avgLatency}ms` : "—",
+          value: avgLatency > 0 ? formatLatency(avgLatency) : "—",
         },
       ].map((stat) => (
         <div
@@ -131,6 +124,25 @@ export function PingChart({
   const filled = useMemo(() => fillChartGaps(data, hours), [data, hours]);
   const hasActivity = filled.some((r) => r.success > 0 || r.failed > 0);
 
+  // One Intl.DateTimeFormat per hours-range — avoids recreating it for every tick label.
+  const bucketFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat(undefined, hours <= 24
+        ? { hour: "2-digit", minute: "2-digit" }
+        : { month: "short", day: "numeric", hour: "2-digit" }),
+    [hours],
+  );
+
+  const formatTick = useCallback(
+    (value: string) => bucketFormatter.format(parseBucketDate(value)),
+    [bucketFormatter],
+  );
+
+  const summaryData = useMemo(
+    () => filled.filter((r) => r.success > 0 || r.failed > 0),
+    [filled],
+  );
+
   if (!hasActivity) {
     return (
       <div className="flex h-[300px] flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border/80 bg-muted/20 text-center">
@@ -147,7 +159,7 @@ export function PingChart({
 
   return (
     <div className="space-y-1">
-      <ChartSummary data={filled.filter((r) => r.success > 0 || r.failed > 0)} />
+      <ChartSummary data={summaryData} />
       <ChartContainer
         config={chartConfig}
         className="aspect-auto h-[300px] w-full"
@@ -169,7 +181,7 @@ export function PingChart({
             axisLine={false}
             tickMargin={10}
             minTickGap={hours <= 24 ? 24 : 40}
-            tickFormatter={(value) => formatBucketLabel(String(value), hours)}
+            tickFormatter={formatTick}
             className="text-[11px] fill-muted-foreground"
           />
           <YAxis
@@ -185,9 +197,7 @@ export function PingChart({
             content={
               <ChartTooltipContent
                 labelFormatter={(label) =>
-                  typeof label === "string"
-                    ? formatBucketLabel(label, hours)
-                    : label
+                  typeof label === "string" ? formatTick(label) : label
                 }
                 formatter={(value, name, item) => {
                   const row = item.payload as ChartPoint;
@@ -195,7 +205,7 @@ export function PingChart({
                     `${Number(value ?? 0)} ${name === "success" ? "successful" : "failed"}`,
                   ];
                   if (row.avgLatency > 0 && name === "success") {
-                    lines.push(`Avg ${row.avgLatency}ms`);
+                    lines.push(`Avg ${formatLatency(row.avgLatency)}`);
                   }
                   return lines.join(" · ");
                 }}

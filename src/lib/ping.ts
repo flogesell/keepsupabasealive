@@ -8,6 +8,8 @@ import {
 } from "./supabase";
 import { pings, projects, type Project } from "./schema";
 
+const DEV = process.env.NODE_ENV === "development";
+
 export type PingResult = {
   success: boolean;
   statusCode: number | null;
@@ -16,16 +18,25 @@ export type PingResult = {
   endpoint: string;
 };
 
+// Keepalive credentials — clearly fake, never match a real account.
+const PING_EMAIL = "keepalive@ping.keepsupabasealive.invalid";
+const PING_PASSWORD = "keepalive-ping-do-not-create";
+
 /**
- * Pings `/auth/v1/health` with the public anon key in the `apikey` header.
- * Hosted Supabase returns `{"error":"requested path is invalid"}` without it.
- * Does not query PostgREST or database tables.
+ * POSTs fake credentials to GoTrue's password-grant endpoint.
+ * GoTrue queries auth.users regardless of whether the email exists, so
+ * the database is touched. We expect HTTP 400 ("invalid_grant") for a
+ * healthy project; anything ≥ 500 or a network error means the project
+ * is down or paused.
  */
 export async function executePing(project: Project): Promise<PingResult> {
   const endpoint = healthCheckUrl(project.url);
   const start = Date.now();
 
+  if (DEV) console.debug(`[ping] ${project.name} → POST ${endpoint}`);
+
   if (!project.anonKey?.trim()) {
+    if (DEV) console.debug(`[ping] ${project.name} skipped — no anon key`);
     return {
       success: false,
       statusCode: null,
@@ -40,6 +51,7 @@ export async function executePing(project: Project): Promise<PingResult> {
   try {
     anonKey = decryptSecret(project.anonKey).trim();
   } catch {
+    if (DEV) console.debug(`[ping] ${project.name} skipped — decrypt failed`);
     return {
       success: false,
       statusCode: null,
@@ -51,36 +63,52 @@ export async function executePing(project: Project): Promise<PingResult> {
 
   try {
     const response = await fetch(endpoint, {
-      method: "GET",
+      method: "POST",
       headers: {
         Accept: "application/json",
+        "Content-Type": "application/json",
         apikey: anonKey,
         Authorization: `Bearer ${anonKey}`,
       },
+      body: JSON.stringify({ email: PING_EMAIL, password: PING_PASSWORD }),
       signal: AbortSignal.timeout(30_000),
       cache: "no-store",
     });
 
     const latencyMs = Date.now() - start;
     const body = await response.text();
-    const apiError = parseSupabaseErrorBody(body);
-    const success = response.ok && !apiError;
+
+    // 400 = "invalid_grant" (expected — GoTrue queried auth.users, project is alive).
+    // 401 = our anon key is wrong.
+    // 5xx / null = project is paused or unreachable.
+    const success = response.status < 500 && response.status !== 401;
+
+    let errorMessage: string | null = null;
+    if (!success) {
+      errorMessage = parseSupabaseErrorBody(body) ?? `HTTP ${response.status}`;
+    }
+
+    if (DEV) {
+      const label = success ? "ok" : "failed";
+      console.debug(`[ping] ${project.name} ${label} — ${response.status} (${latencyMs}ms)\n  body: ${body.slice(0, 300)}`);
+    }
 
     return {
       success,
       statusCode: response.status,
       latencyMs,
-      errorMessage: success
-        ? null
-        : (apiError ?? `HTTP ${response.status}`),
+      errorMessage,
       endpoint,
     };
   } catch (error) {
+    const latencyMs = Date.now() - start;
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    if (DEV) console.debug(`[ping] ${project.name} error — ${errorMessage} (${latencyMs}ms)`);
     return {
       success: false,
       statusCode: null,
-      latencyMs: Date.now() - start,
-      errorMessage: error instanceof Error ? error.message : "Unknown error",
+      latencyMs,
+      errorMessage,
       endpoint,
     };
   }
@@ -143,8 +171,12 @@ export async function runDuePings(): Promise<number> {
       lastPingAt.getTime() + project.intervalMinutes * 60 * 1000;
 
     if (Date.now() >= dueAt) {
+      if (DEV) console.debug(`[ping] ${project.name} is due (last: ${lastPingAt.toISOString()}, interval: ${project.intervalMinutes}m)`);
       await pingProject(project.id);
       count++;
+    } else if (DEV) {
+      const msLeft = dueAt - Date.now();
+      console.debug(`[ping] ${project.name} not due for ${Math.round(msLeft / 1000)}s`);
     }
   }
 

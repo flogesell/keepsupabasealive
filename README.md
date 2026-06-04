@@ -41,7 +41,7 @@
 
 Supabase **pauses free-tier projects** after about **7 days** without API activity. If a project stays paused for **90 days**, it can be **permanently deleted**.
 
-Many developers run side projects on the free tier and forget to touch them — this app automates lightweight **Auth health checks** so your projects stay awake.
+Many developers run side projects on the free tier and forget to touch them — this app automates scheduled **database pings** so your projects stay awake.
 
 ## Features
 
@@ -54,14 +54,14 @@ Many developers run side projects on the free tier and forget to touch them — 
 | ⚡ **Manual ping** | Trigger an immediate health check |
 | 🐳 **Self-hosted** | **SQLite only** (one file + WAL), Docker, [Coolify](https://coolify.io) — no other database backends |
 | 🔐 **Dashboard auth** | Optional HTTP Basic Auth via `DASHBOARD_PASSWORD` (recommended in production) |
-| 🛡️ **Safe by design** | Auth health endpoint only — no database queries, no `service_role` |
+| 🛡️ **Safe by design** | Auth token ping only — no accounts created, no data read or written, no `service_role` key |
 
 ## How it works
 
 ```mermaid
 flowchart LR
   A[Scheduler] --> B{Due?}
-  B -->|yes| C["GET /auth/v1/health"]
+  B -->|yes| C["POST /auth/v1/token"]
   C --> D[Supabase project]
   D --> E[SQLite logs]
   E --> F[Dashboard chart]
@@ -70,24 +70,25 @@ flowchart LR
 Every minute, the built-in scheduler checks which projects are due. For each project it sends:
 
 ```http
-GET https://<project-ref>.supabase.co/auth/v1/health
+POST https://<project-ref>.supabase.co/auth/v1/token?grant_type=password
 apikey: <your-anon-public-key>
 Authorization: Bearer <your-anon-public-key>
+Content-Type: application/json
+
+{"email":"keepalive@ping.keepsupabasealive.invalid","password":"keepalive-ping-do-not-create"}
 ```
 
-This matches the approach used by community tools such as [wake-up-supabase](https://github.com/wilhelmsendk/wake-up-supabase). **Without the `apikey` header**, hosted Supabase responds with:
+GoTrue receives this request and queries `auth.users` to verify the credentials — a real PostgreSQL round-trip that Supabase’s inactivity tracker counts as project activity. The credentials are intentionally fake; GoTrue returns `400 invalid_grant`, which the app treats as **success** (the project is alive and responsive). A `5xx` or network timeout means the project is paused or unreachable.
 
-```json
-{ "error": "requested path is invalid" }
-```
+> **Why not `/auth/v1/health`?** Supabase excludes health-check endpoints from activity tracking to prevent abuse. Any real API request (one that queries the database) is required to reset the inactivity timer.
 
 ### What this app does **not** do
 
-- Query PostgREST (`/rest/v1/`) or your database tables  
+- Create user accounts or send emails  
+- Read or write your application data  
 - Use the **service_role** key  
-- Read or write application data  
 
-Only the public **anon** key is stored (required by Supabase’s gateway), and only on your self-hosted instance.
+Only the public **anon** key is stored, and only on your self-hosted instance.
 
 ## Quick start
 
